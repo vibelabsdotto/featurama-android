@@ -1,3 +1,8 @@
+# Local reports and tooling
+.hermes/
+.agents/
+skills-lock.json
+
 # Built application files
 *.apk
 *.aar

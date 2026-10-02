@@ -11,6 +11,10 @@ android {
 
     defaultConfig {
         minSdk = 21
+        aarMetadata {
+            // Older lint engines skip Compose's bundled runtime checks.
+            minAgpVersion = "8.3.2"
+        }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -44,6 +48,11 @@ android {
         kotlinCompilerExtensionVersion = "1.5.10"
     }
 
+    lint {
+        // A green task must not hide a skipped dependency issue registry.
+        fatal += "ObsoleteLintCustomCheck"
+    }
+
     publishing {
         singleVariant("release") {
             withSourcesJar()
@@ -57,10 +66,14 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+    // Generated public model serializers return KSerializer.
+    api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.3")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    implementation("androidx.compose.ui:ui:1.6.0")
+    // Public @Composable functions and theme colors are part of the SDK API.
+    api("androidx.compose.runtime:runtime:1.6.0")
+    api("androidx.compose.ui:ui:1.6.0")
     implementation("androidx.compose.material3:material3:1.2.0")
     implementation("androidx.compose.ui:ui-tooling-preview:1.6.0")
     implementation("androidx.compose.foundation:foundation:1.6.0")
@@ -72,7 +85,27 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.9")
 }
 
+val prepareLicenseResources by tasks.registering(Sync::class) {
+    // Use a namespaced path so Android packaging does not strip the license.
+    from(rootProject.file("LICENSE")) { into("META-INF/featurama") }
+    into(layout.buildDirectory.dir("generated/licenseResources"))
+}
+android.sourceSets.getByName("main").resources.srcDir(prepareLicenseResources)
+tasks.named("preBuild") { dependsOn(prepareLicenseResources) }
+
+tasks.withType<Jar>().configureEach {
+    from(rootProject.file("LICENSE")) { into("META-INF") }
+}
+
 publishing {
+    repositories {
+        // Local staging only. Remote publication requires a separate, explicit setup.
+        maven {
+            name = "localRelease"
+            url = rootProject.layout.buildDirectory.dir("local-maven").get().asFile.toURI()
+        }
+    }
+
     publications {
         register<MavenPublication>("release") {
             groupId = project.findProperty("GROUP") as String

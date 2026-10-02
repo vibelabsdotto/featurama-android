@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,26 +32,29 @@ internal fun Header(
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .then(if (onClose != null) Modifier.clickable { onClose() } else Modifier),
+                .size(48.dp)
+                .then(if (onClose != null) Modifier
+                    .semantics { contentDescription = strings.close }
+                    .clickable(role = Role.Button) { onClose() } else Modifier),
             contentAlignment = Alignment.Center,
         ) {
             if (onClose != null) {
                 CloseIcon(size = 24.dp, color = theme.text)
             }
         }
-        Spacer(modifier = Modifier.weight(1f))
         Text(
             text = strings.title,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold,
             color = theme.text,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.weight(1f),
         )
-        Spacer(modifier = Modifier.weight(1f))
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clickable { onAdd() },
+                .size(48.dp)
+                .semantics { contentDescription = strings.newRequest }
+                .clickable(role = Role.Button) { onAdd() },
             contentAlignment = Alignment.Center,
         ) {
             PlusIcon(size = 24.dp, color = theme.accent)

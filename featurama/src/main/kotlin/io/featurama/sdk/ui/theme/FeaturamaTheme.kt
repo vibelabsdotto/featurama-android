@@ -14,4 +14,9 @@ data class FeaturamaTheme(
     val border: Color,
     val borderAccent: Color,
     val gray100: Color,
-)
+    val error: Color = defaultError,
+) {
+    companion object {
+        internal val defaultError: Color = Color(0xFFE5484D)
+    }
+}

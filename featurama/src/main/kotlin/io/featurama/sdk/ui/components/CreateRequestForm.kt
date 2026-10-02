@@ -2,132 +2,160 @@ package io.featurama.sdk.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material3.Text
+import io.featurama.sdk.exception.FeaturamaException
+import io.featurama.sdk.model.FeatureRequest
 import io.featurama.sdk.ui.icons.SendIcon
 import io.featurama.sdk.ui.strings.FeaturamaStrings
 import io.featurama.sdk.ui.theme.FeaturamaTheme
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+
+private val emailPattern = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
 
 @Composable
 internal fun CreateRequestForm(
     theme: FeaturamaTheme,
     strings: FeaturamaStrings,
-    onSubmit: suspend (String, String) -> Unit,
+    onSubmit: suspend (String, String, String?) -> Unit,
     onCancel: () -> Unit,
+    emailCollection: String = "none",
+    initialRequest: FeatureRequest? = null,
+    onSubmittingChanged: (Boolean) -> Unit = {},
 ) {
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
+    var title by rememberSaveable(initialRequest?.id) { mutableStateOf(initialRequest?.title.orEmpty()) }
+    var description by rememberSaveable(initialRequest?.id) { mutableStateOf(initialRequest?.description.orEmpty()) }
+    var email by rememberSaveable(initialRequest?.id) { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
+    var submitError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val isEditing = initialRequest != null
+    val collectEmail = !isEditing && emailCollection != "none"
+    val emailIsRequired = collectEmail && emailCollection != "optional"
+    val normalizedEmail = email.trim()
+    val validEmail = emailPattern.matches(normalizedEmail)
+    val titleError = strings.titleTooLong.takeIf { title.trim().length > 200 }
+    val descriptionError = strings.descriptionTooLong.takeIf { description.trim().length > 2000 }
+    val emailError = strings.invalidEmail.takeIf {
+        collectEmail && normalizedEmail.isNotEmpty() && !validEmail
+    }
+    val canSubmit = title.isNotBlank() && description.isNotBlank() &&
+        titleError == null && descriptionError == null && emailError == null &&
+        (!emailIsRequired || validEmail) && !isSubmitting
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 16.dp)
             .background(theme.card, RoundedCornerShape(12.dp))
             .border(1.dp, theme.borderAccent, RoundedCornerShape(12.dp))
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Title input
-        BasicTextField(
+        Text(
+            if (isEditing) strings.editRequest else strings.newRequest,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = theme.text,
+        )
+        RequestTextField(
             value = title,
-            onValueChange = { title = it },
-            textStyle = TextStyle(fontSize = 16.sp, color = theme.text),
+            onValueChange = { title = it; submitError = null },
+            label = strings.titlePlaceholder,
+            theme = theme,
+            enabled = !isSubmitting,
             singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(theme.secondary, RoundedCornerShape(8.dp))
-                .padding(14.dp),
-            decorationBox = { inner ->
-                Box {
-                    if (title.isEmpty()) {
-                        Text(strings.titlePlaceholder, color = theme.textSecondary, fontSize = 16.sp)
-                    }
-                    inner()
-                }
-            },
+            error = titleError,
         )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Description input
-        BasicTextField(
+        RequestTextField(
             value = description,
-            onValueChange = { description = it },
-            textStyle = TextStyle(fontSize = 16.sp, color = theme.text),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 80.dp)
-                .background(theme.secondary, RoundedCornerShape(8.dp))
-                .padding(14.dp),
-            decorationBox = { inner ->
-                Box {
-                    if (description.isEmpty()) {
-                        Text(strings.descriptionPlaceholder, color = theme.textSecondary, fontSize = 16.sp)
-                    }
-                    inner()
-                }
-            },
+            onValueChange = { description = it; submitError = null },
+            label = strings.descriptionPlaceholder,
+            theme = theme,
+            enabled = !isSubmitting,
+            error = descriptionError,
         )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Buttons
-        Row(modifier = Modifier.fillMaxWidth()) {
-            // Cancel
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .background(theme.secondary, RoundedCornerShape(8.dp))
-                    .clickable { onCancel() }
-                    .padding(vertical = 12.dp),
-                contentAlignment = Alignment.Center,
+        if (collectEmail) {
+            RequestTextField(
+                value = email,
+                onValueChange = { email = it; submitError = null },
+                label = if (emailIsRequired) strings.emailRequired else strings.emailOptional,
+                theme = theme,
+                enabled = !isSubmitting,
+                singleLine = true,
+                error = emailError,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            )
+            Text(strings.emailHint, color = theme.textSecondary, fontSize = 12.sp)
+        }
+        submitError?.let {
+            Text(it, fontSize = 13.sp, color = theme.error, modifier = Modifier.fillMaxWidth())
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            TextButton(
+                onClick = onCancel,
+                enabled = !isSubmitting,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.textButtonColors(contentColor = theme.text),
             ) {
-                Text(strings.cancel, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = theme.text)
+                Text(strings.cancel)
             }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Submit
-            val canSubmit = title.trim().isNotEmpty() && !isSubmitting
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .alpha(if (canSubmit) 1f else 0.5f)
-                    .background(theme.accent, RoundedCornerShape(8.dp))
-                    .clickable(enabled = canSubmit) {
-                        scope.launch {
-                            isSubmitting = true
-                            try {
-                                onSubmit(title.trim(), description.trim())
-                                title = ""
-                                description = ""
-                            } finally {
-                                isSubmitting = false
-                            }
+            Button(
+                onClick = {
+                    // Set the guard before launching so repeated taps cannot submit twice.
+                    if (isSubmitting) return@Button
+                    isSubmitting = true
+                    onSubmittingChanged(true)
+                    submitError = null
+                    scope.launch {
+                        try {
+                            onSubmit(
+                                title.trim(),
+                                description.trim(),
+                                normalizedEmail.takeIf { collectEmail && it.isNotEmpty() },
+                            )
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: FeaturamaException) {
+                            // Keep the draft and the server's actionable validation message.
+                            submitError = e.message
+                        } catch (_: Exception) {
+                            submitError = strings.error
+                        } finally {
+                            isSubmitting = false
+                            onSubmittingChanged(false)
                         }
                     }
-                    .padding(vertical = 12.dp),
-                contentAlignment = Alignment.Center,
+                },
+                enabled = canSubmit,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = theme.accent,
+                    contentColor = theme.accentForeground,
+                    disabledContainerColor = theme.accent.copy(alpha = 0.4f),
+                    disabledContentColor = theme.accentForeground,
+                ),
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!isEditing && !isSubmitting) {
                     SendIcon(size = 16.dp, color = theme.accentForeground)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(strings.submit, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = theme.accentForeground)
                 }
+                Text(if (isSubmitting) strings.saving else if (isEditing) strings.save else strings.submit)
             }
         }
     }

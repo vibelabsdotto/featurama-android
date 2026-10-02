@@ -115,7 +115,7 @@ class FeaturamaClientTest {
     fun `createFeatureRequest uses default user identifier`() = runBlocking {
         mockServer.enqueue(MockResponse().setBody(singleFeatureRequestResponse()))
 
-        client.createFeatureRequest(title = "New Feature")
+        client.createFeatureRequest(title = "New Feature", description = "Feature description")
 
         val request = mockServer.takeRequest()
         val body = request.body.readUtf8()
@@ -123,18 +123,35 @@ class FeaturamaClientTest {
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun `createFeatureRequest with blank title throws`() = runBlocking {
-        client.createFeatureRequest(title = "   ")
+    fun `createFeatureRequest with blank title throws`() {
+        runBlocking { client.createFeatureRequest(title = "   ", description = "Desc") }
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun `createFeatureRequest with title over 200 chars throws`() = runBlocking {
-        client.createFeatureRequest(title = "a".repeat(201))
+    fun `createFeatureRequest with title over 200 chars throws`() {
+        runBlocking {
+            client.createFeatureRequest(title = "a".repeat(201), description = "Desc")
+        }
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun `createFeatureRequest with description over 2000 chars throws`() = runBlocking {
-        client.createFeatureRequest(title = "Title", description = "a".repeat(2001))
+    fun `createFeatureRequest with blank description throws`() {
+        runBlocking { client.createFeatureRequest(title = "Title", description = "   ") }
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `updateFeatureRequest with blank description throws`() {
+        runBlocking {
+            val id = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
+            client.updateFeatureRequest(id = id, title = "Title", description = "")
+        }
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `createFeatureRequest with description over 2000 chars throws`() {
+        runBlocking {
+            client.createFeatureRequest(title = "Title", description = "a".repeat(2001))
+        }
     }
 
     @Test
@@ -182,34 +199,44 @@ class FeaturamaClientTest {
     }
 
     @Test(expected = UnauthorizedException::class)
-    fun `401 response throws UnauthorizedException`() = runBlocking {
-        mockServer.enqueue(MockResponse().setResponseCode(401))
-        client.getFeatureRequests()
+    fun `401 response throws UnauthorizedException`() {
+        runBlocking {
+            mockServer.enqueue(MockResponse().setResponseCode(401))
+            client.getFeatureRequests()
+        }
     }
 
     @Test(expected = ForbiddenException::class)
-    fun `403 response throws ForbiddenException`() = runBlocking {
-        mockServer.enqueue(MockResponse().setResponseCode(403))
-        client.getFeatureRequests()
+    fun `403 response throws ForbiddenException`() {
+        runBlocking {
+            mockServer.enqueue(MockResponse().setResponseCode(403))
+            client.getFeatureRequests()
+        }
     }
 
     @Test(expected = NotFoundException::class)
-    fun `404 response throws NotFoundException`() = runBlocking {
-        mockServer.enqueue(MockResponse().setResponseCode(404))
-        client.getFeatureRequests()
+    fun `404 response throws NotFoundException`() {
+        runBlocking {
+            mockServer.enqueue(MockResponse().setResponseCode(404))
+            client.getFeatureRequests()
+        }
     }
 
     @Test(expected = ConflictException::class)
-    fun `409 response throws ConflictException`() = runBlocking {
-        mockServer.enqueue(MockResponse().setResponseCode(409))
-        val id = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
-        client.vote(id)
+    fun `409 response throws ConflictException`() {
+        runBlocking {
+            mockServer.enqueue(MockResponse().setResponseCode(409))
+            val id = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
+            client.vote(id)
+        }
     }
 
     @Test(expected = ServerException::class)
-    fun `500 response throws ServerException`() = runBlocking {
-        mockServer.enqueue(MockResponse().setResponseCode(500))
-        client.getFeatureRequests()
+    fun `500 response throws ServerException`() {
+        runBlocking {
+            mockServer.enqueue(MockResponse().setResponseCode(500))
+            client.getFeatureRequests()
+        }
     }
 
     @Test
@@ -217,7 +244,7 @@ class FeaturamaClientTest {
         mockServer.enqueue(MockResponse().setBody(singleFeatureRequestResponse()))
 
         client.setUserIdentifier("new_user")
-        client.createFeatureRequest(title = "Test")
+        client.createFeatureRequest(title = "Test", description = "Test description")
 
         val request = mockServer.takeRequest()
         val body = request.body.readUtf8()
@@ -225,18 +252,18 @@ class FeaturamaClientTest {
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun `getFeatureRequests with page less than 1 throws`() = runBlocking {
-        client.getFeatureRequests(page = 0)
+    fun `getFeatureRequests with page less than 1 throws`() {
+        runBlocking { client.getFeatureRequests(page = 0) }
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun `getFeatureRequests with pageSize less than 1 throws`() = runBlocking {
-        client.getFeatureRequests(pageSize = 0)
+    fun `getFeatureRequests with pageSize less than 1 throws`() {
+        runBlocking { client.getFeatureRequests(pageSize = 0) }
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun `getFeatureRequests with pageSize greater than 100 throws`() = runBlocking {
-        client.getFeatureRequests(pageSize = 101)
+    fun `getFeatureRequests with pageSize greater than 100 throws`() {
+        runBlocking { client.getFeatureRequests(pageSize = 101) }
     }
 
     private fun emptyListResponse() = """

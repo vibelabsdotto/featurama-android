@@ -19,6 +19,9 @@ internal object HttpClientFactory {
     fun create(config: FeaturamaConfig): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(ApiKeyInterceptor(config.apiKey))
+            // Project credentials must never be forwarded to a redirect target.
+            .followRedirects(false)
+            .followSslRedirects(false)
             .connectTimeout(config.connectTimeoutMs, TimeUnit.MILLISECONDS)
             .readTimeout(config.readTimeoutMs, TimeUnit.MILLISECONDS)
             .writeTimeout(config.writeTimeoutMs, TimeUnit.MILLISECONDS)

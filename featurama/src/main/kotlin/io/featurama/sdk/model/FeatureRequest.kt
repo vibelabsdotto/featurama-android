@@ -40,5 +40,10 @@ data class FeatureRequest(
     val submitterIdentifier: String? = null,
 
     @Serializable(with = InstantSerializer::class)
-    val createdAt: Instant
+    val createdAt: Instant,
+    val isApproved: Boolean = true,
+    val hasVoted: Boolean = false,
+    val commentCount: Int = 0,
+    val submitterEmail: String? = null,
+    val deviceInfo: DeviceInfo? = null
 )

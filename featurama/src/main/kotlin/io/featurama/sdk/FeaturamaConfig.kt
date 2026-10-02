@@ -6,7 +6,7 @@ package io.featurama.sdk
  * Use [Builder] to create an instance.
  *
  * @property apiKey The API key for authentication (required).
- * @property baseUrl The base URL of the Featurama API (your Convex deployment URL, e.g. "https://your-app.convex.site").
+ * @property baseUrl The base URL of the Featurama API. Defaults to the hosted Featurama API.
  * @property defaultUserIdentifier Default identifier used for votes and submissions.
  * @property connectTimeoutMs Connection timeout in milliseconds.
  * @property readTimeoutMs Read timeout in milliseconds.
@@ -35,7 +35,7 @@ class FeaturamaConfig private constructor(
         /**
          * Sets the base URL of the Featurama API.
          *
-         * This should be your Convex deployment URL (e.g. "https://your-app.convex.site").
+         * Override this only for a self-hosted or local API (e.g. "https://api.example.com").
          *
          * @param url The base URL (without trailing slash).
          * @return This builder instance.
@@ -97,6 +97,7 @@ class FeaturamaConfig private constructor(
          */
         fun build(): FeaturamaConfig {
             require(apiKey.isNotBlank()) { "API key must not be blank" }
+            require(apiKey.all { it in ' '..'~' }) { "API key must contain only printable ASCII characters" }
 
             return FeaturamaConfig(
                 apiKey = apiKey,
@@ -110,8 +111,8 @@ class FeaturamaConfig private constructor(
     }
 
     companion object {
-        /** Default base URL for the Featurama API (Convex deployment). */
-        const val DEFAULT_BASE_URL = "https://featurama.convex.site"
+        /** Default base URL for the Featurama API. */
+        const val DEFAULT_BASE_URL = "https://newapi.featurama.app"
 
         /** Default connection timeout in milliseconds. */
         const val DEFAULT_CONNECT_TIMEOUT_MS = 30_000L

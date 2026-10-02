@@ -1,6 +1,8 @@
 package io.featurama.sdk
 
 import io.featurama.sdk.exception.FeaturamaException
+import io.featurama.sdk.model.Comment
+import io.featurama.sdk.model.DeviceInfo
 import io.featurama.sdk.model.FeatureRequest
 import io.featurama.sdk.model.FeatureRequestList
 import io.featurama.sdk.model.ProjectConfig
@@ -16,7 +18,7 @@ import java.util.UUID
  * // In your Application.onCreate()
  * Featurama.init("fm_live_xxxxxxxxxxxx") {
  *     defaultUserIdentifier("user_123")
- *     baseUrl("https://your-app.convex.site")
+ *     baseUrl("https://api.example.com")
  * }
  *
  * // Later, in a coroutine
@@ -117,14 +119,15 @@ object Featurama {
     suspend fun getFeatureRequests(
         page: Int = 1,
         pageSize: Int = 20,
-        filter: String? = null
-    ): FeatureRequestList = getClient().getFeatureRequests(page, pageSize, filter)
+        filter: String? = null,
+        submitterIdentifier: String? = null
+    ): FeatureRequestList = getClient().getFeatureRequests(page, pageSize, filter, submitterIdentifier)
 
     /**
      * Creates a new feature request.
      *
      * @param title The title of the feature request (1-200 characters).
-     * @param description Optional description of the feature request (max 2000 characters).
+     * @param description The description of the feature request (required by the API, max 2000 characters).
      * @param submitterIdentifier Optional identifier for the submitter.
      * @return The created [FeatureRequest].
      * @throws IllegalStateException if the SDK has not been initialized.
@@ -132,16 +135,18 @@ object Featurama {
     @JvmStatic
     suspend fun createFeatureRequest(
         title: String,
-        description: String? = null,
-        submitterIdentifier: String? = null
-    ): FeatureRequest = getClient().createFeatureRequest(title, description, submitterIdentifier)
+        description: String,
+        submitterIdentifier: String? = null,
+        email: String? = null,
+        deviceInfo: DeviceInfo? = null
+    ): FeatureRequest = getClient().createFeatureRequest(title, description, submitterIdentifier, email, deviceInfo)
 
     /**
      * Updates an existing feature request.
      *
      * @param id The ID of the feature request to update.
      * @param title The new title of the feature request (1-200 characters).
-     * @param description The new description of the feature request (max 2000 characters).
+     * @param description The new description of the feature request (required by the API, max 2000 characters).
      * @param submitterIdentifier The submitter identifier for authorization.
      * @return The updated [FeatureRequest].
      * @throws IllegalStateException if the SDK has not been initialized.
@@ -150,7 +155,7 @@ object Featurama {
     suspend fun updateFeatureRequest(
         id: UUID,
         title: String,
-        description: String? = null,
+        description: String,
         submitterIdentifier: String? = null
     ): FeatureRequest = getClient().updateFeatureRequest(id, title, description, submitterIdentifier)
 
@@ -207,6 +212,25 @@ object Featurama {
      */
     @JvmStatic
     suspend fun getProjectConfig(): ProjectConfig = getClient().getProjectConfig()
+
+    @JvmStatic
+    suspend fun getComments(featureRequestId: UUID): List<Comment> = getClient().getComments(featureRequestId)
+
+    @JvmStatic
+    suspend fun addComment(featureRequestId: UUID, content: String, authorIdentifier: String? = null, authorName: String? = null): Comment =
+        getClient().addComment(featureRequestId, content, authorIdentifier, authorName)
+
+    @JvmStatic
+    suspend fun voteComment(featureRequestId: UUID, commentId: UUID, voterIdentifier: String? = null): Comment =
+        getClient().voteComment(featureRequestId, commentId, voterIdentifier)
+
+    @JvmStatic
+    suspend fun removeCommentVote(featureRequestId: UUID, commentId: UUID, voterIdentifier: String? = null): Comment =
+        getClient().removeCommentVote(featureRequestId, commentId, voterIdentifier)
+
+    @JvmStatic
+    suspend fun toggleCommentVote(featureRequestId: UUID, commentId: UUID, voterIdentifier: String? = null): Comment =
+        getClient().toggleCommentVote(featureRequestId, commentId, voterIdentifier)
 
     /**
      * Returns the underlying client instance.

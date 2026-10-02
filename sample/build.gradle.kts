@@ -3,6 +3,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+fun quoted(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
 android {
     namespace = "io.featurama.sample"
     compileSdk = 34
@@ -13,6 +15,8 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
+        buildConfigField("String", "FEATURAMA_API_KEY", quoted(providers.environmentVariable("FEATURAMA_API_KEY").orElse("fm_live_your_api_key_here").get()))
+        buildConfigField("String", "FEATURAMA_BASE_URL", quoted(providers.environmentVariable("FEATURAMA_BASE_URL").orElse("https://newapi.featurama.app").get()))
     }
 
     buildTypes {
@@ -37,10 +41,16 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
+        compose = true
     }
 }
 
+android.composeOptions.kotlinCompilerExtensionVersion = "1.5.10"
+
 dependencies {
+    implementation("androidx.activity:activity-compose:1.8.2")
+    implementation("androidx.compose.material3:material3:1.2.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
     implementation(project(":featurama"))
